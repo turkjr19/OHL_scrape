@@ -12,7 +12,7 @@ df <- data.frame(start_num)
 # create an empty place to add each game data
 output <- NULL
 
-# iterative process to read each team id from ohl_teams data frame and then run code
+# iterative process to read each page with a start_num in data frame above
 for (i in 1:nrow(df)) {
   page <- (df[i, 1])
   Sys.sleep(2)
@@ -27,7 +27,7 @@ url <- paste0(str1,str2,str3)
 # use jsonlite::fromJSON to handle NULL values
 json_data <- jsonlite::fromJSON(url, simplifyDataFrame = TRUE) 
 
-# Pull out the data frame for goal data
+# Pull out the data required from json data
 player_id<- json_data[["SiteKit"]][["Statviewtype"]][["player_id"]]
 first_name <- json_data[["SiteKit"]][["Statviewtype"]][["first_name"]]
 last_name <- json_data[["SiteKit"]][["Statviewtype"]][["last_name"]]
