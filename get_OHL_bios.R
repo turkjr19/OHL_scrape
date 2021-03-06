@@ -5,7 +5,8 @@ library(stringr)
 library(RJSONIO)
 library(jsonlite)
 
-# create dataframe to create start and finish requirements
+# url requires a start number which gets pasted into the url
+# create dataframe to create start requirements
 start_num <- c("0", "100", "200", "300", "400", "500")
 df <- data.frame(start_num)
 
