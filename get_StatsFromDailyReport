@@ -81,3 +81,25 @@ fnAllTeams <- function(cleanSkaters = TRUE){
 
 # run this line to get all skater stats
 ohlAllSkaters <- fnAllTeams(cleanSkaters = TRUE)
+
+# **** Get team stats ****
+# get standings (can use this to create relative players stats)
+table_return <- url_dailyreport %>%
+  read_html() %>%
+  html_nodes(xpath = '/html/body/table[5]') %>%
+  html_table()
+
+# clean the scraped stats table
+table_return <- table_return[[1]]
+colnames(table_return)[1] = "team"
+# pull out the teams with playoff designations
+playoffTeams <- table_return %>% 
+  mutate(team = str_split(team, "\\ ", simplify = TRUE, n = 2)[,2]) %>% 
+  filter(str_detect(team, 'x|xy|xyz')) %>% 
+  mutate(team = str_split(team, "\\ ", simplify = TRUE, n = 2)[,2])
+# pull out teams without playoff designations
+nonPlayoffTeams <- table_return %>% 
+  mutate(team = str_split(team, "\\ ", simplify = TRUE, n = 2)[,2]) %>% 
+  filter(!str_detect(team, 'x|xy|xyz'))
+# combine tables
+get_OhlTeamStats <- bind_rows(playoffTeams, nonPlayoffTeams)
