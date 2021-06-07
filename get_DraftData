@@ -1,0 +1,103 @@
+library(tidyverse)
+library(janitor)
+library(stringr)
+library(RJSONIO)
+library(jsonlite)
+library(lubridate)
+
+# read the url for the ohl priority selection
+draft_url <- "https://ohldraft.rinknet.com/2021/results.txt"
+  
+#### scrape the data from the url above ####
+draft_data <- jsonlite::fromJSON(draft_url, simplifyDataFrame = TRUE)
+  
+# pull out the picks dataframe from json
+picks <- draft_data[["Picks"]] %>% 
+  clean_names() %>% 
+  select(round:team)
+
+# pull out the player data under the picks json data
+player <- draft_data[["Picks"]][["Player"]] %>% 
+  clean_names() %>%
+  mutate(birth_date = as.numeric(substr(birth_date, 7, 16))) %>% 
+  mutate(birth_date = as_datetime(birth_date)) %>% 
+  mutate(birth_date = as_date(birth_date)) %>% 
+  select(first_name:birth_date) %>% 
+  select(-c(home_town, home_town_province_f, position_f, position_long_f, nationality_f)) %>% 
+  mutate(draft_overall = row_number()) %>% 
+  select(draft_overall, first_name:weight, birth_date, everything())
+
+# pull out the source data
+source <- draft_data[["Picks"]][["Player"]][["Source"]] %>% 
+  clean_names() %>% 
+  mutate(draft_overall = row_number()) %>% 
+  select(draft_overall, source = "list_builder_league_source")
+
+# join picks and players
+draft_data <- picks %>% 
+  left_join(player, by = "draft_overall") %>% 
+  left_join(source, by = "draft_overall") %>% 
+  mutate(age.group = case_when(
+    (month(birth_date) >=9 & day(birth_date) >15) | month(birth_date)>=10 ~ "late",
+    TRUE ~ "early")) %>% 
+  mutate(size = case_when(
+    height >= 6.00 ~ "true",
+    TRUE ~ "false"
+  ))
+View(draft_data)
+
+#### functions for draft day ####
+# function to filter for specific team
+get_team <- function(x){
+  draft_data %>%
+    filter(team == x)
+}
+
+get_player <- function(y){
+  draft_data %>% 
+    filter(first_name == y)
+}
+
+
+# pick a team
+team <- get_team("Peterborough")
+View(team)
+
+# pick a player by first name
+who <- get_player("Marcus")
+
+#### analyzing data below ####
+
+# number of picks by position
+position <- draft_data %>% 
+  group_by(position) %>% 
+  tally()
+View(position)
+
+# source numbers
+sourceBreakdown <- draft_data %>% 
+  group_by(source, round) %>% 
+  tally()
+View(sourceBreakdown)
+
+# convert to wide to see round by round breakdown by league
+sourceBreakdownWide <- sourceBreakdown %>% 
+  arrange(round) %>%
+  pivot_wider(names_from  = source,
+              values_from = n)
+
+# early and late breakdown
+earlyLate <- draft_data %>% 
+  group_by(age.group) %>% 
+  tally()
+View(earlyLate)
+
+lateDOB <- draft_data %>% 
+  filter(age.group == "late")
+View(lateDOB)
+
+# size breakdown
+sixFeetAndPlus <- draft_data %>% 
+  group_by(size) %>% 
+  tally()
+View(sixFeetAndPlus)
